@@ -1,61 +1,101 @@
-import sp, { setValues } from '../utils/query.js';
-import request, { sql } from '../utils/sqlService.js';
+import sp from '../utils/queryHelper.js';
+import { sql } from '../utils/sqlService.js';
 
 const _sp = {
-    select: (accept) => accept === undefined ? 'SELECT * FROM USERS' : `SELECT * FROM USERS WHERE accept=${accept}`,
-    byId: (uid) => `${_sp.select()} WHERE uid='${uid}'`,
-    roles: (uid) => `SELECT r.rid, r.name FROM AUTHORITIES a INNER JOIN ROLES r ON a.r_id=r.rid WHERE u_id='${uid}'`,
-    login: (username, password) => `EXECUTE SP_LOGIN '${username}', '${password}'`,
-
-    register: (entity) => {
-        setValues(entity);
-        const { uid, password, name, image } = entity
-        return `EXECUTE SP_REGISTER ${uid}, ${password}, ${name}, ${image}`;
-    },
-    softDelete: (uid) => `UPDATE USERS SET accept=0 WHERE uid='${uid}'`
+    roles: (uid) => sp.select(`${AuthorityDAO.TABLE} WHERE u_id = '${uid}'`)
 }
 
-const setUser = async (users) => {
-    if (!users) return [];
-    for (const u of users) {
-        u.password = u.password.toString('base64');
-        await sql.execute(_sp.roles(u.uid)).then(rs => u['roles'] = rs.recordset);
-    } return users;
+const util = {
+
+    setUsers: async (users) => {
+        if (!users) return [];
+        for (const u of users) {
+            u.password = u.password.toString('base64');
+            u[UserDAO.ROLES] = (await sql.execute(_sp.roles(u[UserDAO.KEY]))).recordset;
+        } return users;
+    }
 }
 
-const execute = async (query, ...serials) => {
-    const pool = sql.connect;
-    return sql.execute(query, ...serials)
-        .then(async r => await setUser(r.recordset))
-        .finally(() => pool.close());
-};
+class AuthorityDAO {
+    static TABLE = '[AUTHORITIES]';
+    static FIELDS = ['u_id, r_id'];
+}
 
 class UserDAO {
 
-    // READ
-    getList = (accept) => execute(_sp.select(accept));
+    static KEY = 'uid';
+    static TABLE = '[USERS]';
+    static FIELDS = [UserDAO.KEY, 'password', 'name', 'image'];
+    static ROLES = 'roles'; // references
 
-    getById = (id) => execute(_sp.byId(id)).then(r => r[0]);
-
-    login = (username, password) => execute(_sp.login(username, password)).then(r => r[0]);
-
-    // INSERT
-    register = async (entity) => {
-        const pool = sql.connect;
-        return sql.execute(_sp.register(entity))
-            .then(async r => (await setUser(r.recordset))[0])
-            .finally(() => pool.close());
+    getList = async (accept) => {
+        // prepare query
+        const query = sp.select(accept == null ? UserDAO.TABLE
+            : `${UserDAO.TABLE} WHERE accept=${accept ? 1 : 0}`
+        );
+        // execute query
+        return sql.execute(query).then(async r => await util.setUsers(r.recordset))
     };
 
-    insert = (entity) => { };
+    getById = async (ids) => {
+        let isArr = Array.isArray(ids);
+        let query = sp.select(UserDAO.TABLE, 'WHERE');
 
-    // UPDATE
-    update = (entity) => { };
+        if (isArr) {
+            for (let id of ids) query += `[${UserDAO.KEY}]='${id}' OR `;
+            query = query.slice(0, query.length - 3)
+        } else query += `[${UserDAO.KEY}]='${ids}'`;
 
-    softDelete = (id) => request(_sp.softDelete(id)).then(r => r.rowsAffected[0]);
+        return sql.execute(query).then(async r => isArr
+            ? (await util.setUsers(r.recordset))
+            : (await util.setUsers(r.recordset))[0]
+        );
+    };
 
-    // DELETE -> hard delete
-    delete = async (id) => request(sp.delete('USERS', 'uid', `'${id}'`)).then(r => r.rowsAffected[0]);
+    insert = async (data) => {
+        const isArr = Array.isArray(data);
+        const query = sp.insert(UserDAO.TABLE, data, UserDAO.FIELDS, UserDAO.KEY);
+
+        return sql.execute(query).then(async _r => {
+            let _e = undefined;
+            const compileRoles = `
+                sql.execute(
+                    sp.insert(AuthorityDAO.TABLE, _e[UserDAO.ROLES], AuthorityDAO.FIELDS)
+                ).catch(err => console.error(err));
+            `; // compileRoles for insert AUTHORITIES data
+
+            if (isArr) for (_e of data) {
+                if (_e[UserDAO.ROLES]) eval(compileRoles);
+            } else if (data[UserDAO.ROLES]) {
+                _e = data;
+                eval(compileRoles);
+            }
+
+            return isArr
+                ? this.getById(data.map(e => e[UserDAO.KEY]))
+                : this.getById(data[UserDAO.KEY])
+        });
+    };
+
+    update = async (data) => {
+        const query = sp.update(UserDAO.TABLE, data, UserDAO.FIELDS, UserDAO.KEY);
+        return sql.execute(query).then(async _r => this.getById(
+            Array.isArray(data) ? data.map(e => e[UserDAO.KEY]) : data[UserDAO.KEY]
+        ));
+    };
+
+    setAccept = async (data) => {
+        const query = sp.update(UserDAO.TABLE, data, ['uid', 'accept'], UserDAO.KEY);
+        return sql.execute(query).then(async _r => this.getById(
+            Array.isArray(data) ? data.map(e => e[UserDAO.KEY]) : data[UserDAO.KEY]
+        ));
+    }
+
+    delete = async (ids) => {
+        const query = sp.delete(UserDAO.TABLE, UserDAO.KEY, ids);
+        return sql.execute(query).then(async r => r.rowsAffected.reduce((a, b) => a + b));
+    };
+
 }
 
 export default new UserDAO();

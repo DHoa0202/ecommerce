@@ -3,19 +3,19 @@ import dotenv from "dotenv"
 import config from '../../configuration/mssqlConfig.js';
 
 const show = (dotenv.config().parsed?.SHOW_SQL == 'true') || false;
+
+// Keep connection waiting to close
 const sql = {
     connect: (await mssql.connect(config)),
-    execute: async (...serials) => {
-        const pool = sql.connect;
-        let query = serials.join('\xa0').toString();
+    execute: async (query) => {
         if (show) console.log(query);
-        return await pool.query(query);
+        return sql.connect.query(query);
     }
 }
 
-const request = async (...serials) => {
+// Connect and close instantly
+const request = async (query) => {
     const pool = (await mssql.connect(config)).request();
-    let query = serials.join('\xa0').toString();
     if (show) console.log(query);
     return pool.query(query);
 }

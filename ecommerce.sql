@@ -29,7 +29,7 @@ CREATE TABLE USERS (
     password binary(70) not null,
     name nvarchar(50) null,
     image varchar(256) default N'default.png', 
-    accept bit default 1,-- softdelete 0 || 1 allow
+    access bit default 1,-- softdelete 0 || 1 allow
     regTime datetime default GETDATE() -- register time
 );
 GO
@@ -70,7 +70,7 @@ CREATE TABLE PRODUCTS (
     price float not null,
     quantity int not null,
     regTime datetime default GETDATE(),
-    accept bit default 1, -- softdelete 0 || 1 allow
+    access bit default 1, -- softdelete 0 || 1 allow
 
     u_id varchar(80) foreign key references USERS(uid) 
 	on update cascade on delete cascade not null,

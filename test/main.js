@@ -1,11 +1,51 @@
 import dao from '../src/models/dao/userDAO.js';
+import { date } from '../src/models/utils/queryHelper.js';
 
 const entity = {
     uid: 'abc',
-    password: '123',
+    password: { type: "PWDENCRYPT('?')", value: '123' },
     name: 'new ABC',
-    image: null
+    image: null,
+    roles: [
+        { u_id: 'abc', r_id: 1 },
+        { u_id: 'abc', r_id: 2 },
+    ]
 }
-await dao.delete(entity.uid).then(r => console.log(r))
-dao.register(entity).then(r => console.log(r));
-// dao.getList(1).then(r => console.log(r))
+
+const entities = [
+    {
+        uid: 'bcd',
+        password: { type: "PWDENCRYPT('?')", value: '123' },
+        name: 'new BCD',
+        image: null,
+        roles: [
+            { u_id: 'bcd', r_id: 3 },
+            { u_id: 'bcd', r_id: 5 },
+        ]
+    }, {
+        uid: 'def',
+        password: { type: "PWDENCRYPT('?')", value: '123' },
+        name: 'new DEF',
+        image: null,
+        roles: [
+            { u_id: 'def', r_id: 4 },
+            { u_id: 'def', r_id: 5 },
+        ]
+    }
+]
+// read only
+// entities.forEach(x => x['accept'] = true);
+// await dao.setAccept(entities)//.then(r => console.dir(r));
+// await dao.getList(false).then(r => console.log(r))
+
+// // single data
+// await dao.delete(entity.uid)//.then(r => console.log(r))
+// await dao.insert(entity)//.then(r => console.log(r))
+// await dao.update(entity)//.then(r => console.log(r))
+// await dao.getById(entity.uid)//.then(r => console.log(r))
+
+// // multiple data
+// await dao.delete(entities.map(r => r.uid))//.then(r => console.log(r))
+// await dao.insert(entities)//.then(r => console.log(r))
+// await dao.update(entities)//.then(r => console.log(r))
+// await dao.getById(entities.map(e => e.uid))//.then(r => console.log(r))
