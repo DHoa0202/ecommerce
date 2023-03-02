@@ -2,7 +2,7 @@ import sp, { modify } from '../utils/queryHelper.js';
 import { sql } from '../utils/sqlService.js';
 
 const _sp = {
-    delete: (ids) => {
+    delete: (ids) => { // create query to delete multiple id
         const [id1, id2] = AuthorityDAO.FIELDS;
         let query = `DELETE FROM ${AuthorityDAO.TABLE} WHERE `;
 
@@ -21,22 +21,29 @@ export class AuthorityDAO {
     static TABLE = '[AUTHORITIES]';
     static FIELDS = ['u_id', 'r_id'];
 
-    getList = async () => {
+    getList = async () => { // get all authorities
         const query = sp.select(AuthorityDAO.TABLE);
         return sql.execute(query).then(async r => r.recordset)
     };
 
-    getByHalfId = async(id) => {
+    /**
+     * EX1: {u_id: 'abc'} to get all authorities by u_id = 'abc'
+     * EX2: {r_id: 1} to get all authorities by r_id = 1
+     * 
+     * @param {Object} id to get data
+     * @returns all the data got by half id
+     */
+    getByHalfId = async(id) => { // get by u_id or r_id
         const key = Object.keys(id)[0];
         const query = sp.select(AuthorityDAO.TABLE, `WHERE ${key} = ${modify(id[key])}`);
         return sql.execute(query).then(async r => r.recordset)
     }
 
-    getById = async (ids) => {
+    getById = async (ids) => { // get by id EX: {u_id: 'abc', r_id: 1} WHERE u_id='abc' AND r_id=1
         let query = sp.select(AuthorityDAO.TABLE, 'WHERE ');
         const isArr = Array.isArray(ids);
 
-        if (isArr) {
+        if (isArr) { // single id or multiple id
             for (const id of ids) {
                 const { u_id, r_id } = modify(id);
                 query += `(u_id=${u_id} AND r_id=${r_id}) OR `;
