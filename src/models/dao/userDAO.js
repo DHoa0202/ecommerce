@@ -2,16 +2,6 @@ import sp from '../utils/queryHelper.js';
 import { sql } from '../utils/sqlService.js';
 import authorityDAO from './AuthorityDAO.js'
 
-const util = {
-    setUsers: async (users) => {
-        if (!users) return [];
-        for (const u of users) {
-            u.password = u.password.toString('base64');
-            u[UserDAO.ROLES] = (await authorityDAO.getByHalfId({ u_id: u.uid }));
-        } return users;
-    }
-}
-
 export class UserDAO {
 
     static KEY = 'uid';
@@ -19,13 +9,21 @@ export class UserDAO {
     static FIELDS = [UserDAO.KEY, 'password', 'name', 'image'];
     static ROLES = 'roles'; // references
 
+    #setUsers = async (users) => {
+        if (!users) return [];
+        for (const u of users) {
+            u.password = u.password.toString('base64');
+            u[UserDAO.ROLES] = (await authorityDAO.getByHalfId({ u_id: u.uid }));
+        } return users;
+    }
+
     getList = async (accept) => {
         // prepare query
         const query = sp.select(accept == null ? UserDAO.TABLE
             : `${UserDAO.TABLE} WHERE accept=${accept ? 1 : 0}`
         );
         // execute query
-        return sql.execute(query).then(async r => await util.setUsers(r.recordset))
+        return sql.execute(query).then(async r => await this.#setUsers(r.recordset))
     };
 
     getById = async (ids) => {
@@ -38,8 +36,8 @@ export class UserDAO {
         } else query += `[${UserDAO.KEY}]='${ids}'`;
 
         return sql.execute(query).then(async r => isArr
-            ? (await util.setUsers(r.recordset))
-            : (await util.setUsers(r.recordset))[0]
+            ? (await this.#setUsers(r.recordset))
+            : (await this.#setUsers(r.recordset))[0]
         );
     };
 
@@ -48,7 +46,7 @@ export class UserDAO {
         const query = sp.insert(UserDAO.TABLE, data, UserDAO.FIELDS, UserDAO.KEY);
 
         return sql.execute(query).then(async _r => {
-            if (isArr) for(const e of data) {
+            if (isArr) for (const e of data) {
                 if (e[UserDAO.ROLES]) authorityDAO.insert(e[UserDAO.ROLES]);
             } else if (data[UserDAO.ROLES]) authorityDAO.insert(data[UserDAO.ROLES]);
 
