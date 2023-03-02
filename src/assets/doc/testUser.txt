@@ -28,14 +28,14 @@ const entities = [
         image: null
     }
 ]
-// read only
+// // read only
 // entities.forEach(x => x['accept'] = true);
 // await dao.setAccept(entities)//.then(r => console.dir(r));
 // await dao.getList(false).then(r => console.log(r))
 
 // // single data
 // await dao.delete(entity.uid)//.then(r => console.log(r))
-// await dao.insert(entity).then(r => console.log(r))
+// await dao.insert(entity)//.then(r => console.log(r))
 // await dao.update(entity)//.then(r => console.log(r))
 // await dao.getById(entity.uid)//.then(r => console.log(r))
 

@@ -1,27 +1,18 @@
 import sp from '../utils/queryHelper.js';
 import { sql } from '../utils/sqlService.js';
-
-const _sp = {
-    roles: (uid) => sp.select(`${AuthorityDAO.TABLE} WHERE u_id = '${uid}'`)
-}
+import authorityDAO from './AuthorityDAO.js'
 
 const util = {
-
     setUsers: async (users) => {
         if (!users) return [];
         for (const u of users) {
             u.password = u.password.toString('base64');
-            u[UserDAO.ROLES] = (await sql.execute(_sp.roles(u[UserDAO.KEY]))).recordset;
+            u[UserDAO.ROLES] = (await authorityDAO.getByHalfId({ u_id: u.uid }));
         } return users;
     }
 }
 
-class AuthorityDAO {
-    static TABLE = '[AUTHORITIES]';
-    static FIELDS = ['u_id, r_id'];
-}
-
-class UserDAO {
+export class UserDAO {
 
     static KEY = 'uid';
     static TABLE = '[USERS]';
@@ -57,19 +48,9 @@ class UserDAO {
         const query = sp.insert(UserDAO.TABLE, data, UserDAO.FIELDS, UserDAO.KEY);
 
         return sql.execute(query).then(async _r => {
-            let _e = undefined;
-            const compileRoles = `
-                sql.execute(
-                    sp.insert(AuthorityDAO.TABLE, _e[UserDAO.ROLES], AuthorityDAO.FIELDS)
-                ).catch(err => console.error(err));
-            `; // compileRoles for insert AUTHORITIES data
-
-            if (isArr) for (_e of data) {
-                if (_e[UserDAO.ROLES]) eval(compileRoles);
-            } else if (data[UserDAO.ROLES]) {
-                _e = data;
-                eval(compileRoles);
-            }
+            if (isArr) for(const e of data) {
+                if (e[UserDAO.ROLES]) authorityDAO.insert(e[UserDAO.ROLES]);
+            } else if (data[UserDAO.ROLES]) authorityDAO.insert(data[UserDAO.ROLES]);
 
             return isArr
                 ? this.getById(data.map(e => e[UserDAO.KEY]))

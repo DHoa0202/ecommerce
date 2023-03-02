@@ -25,30 +25,23 @@ const util = {
 
 const modify = (data) => {
     if (data === null) return 'NULL';
-    else if (Array.isArray(data))
-        for (const i in data)
-            if (typeof data[i] == 'object')
-                if (data[i].type)
-                    data[i] = modify(data[i])
-                else modify(data[i]);
-            else data[i] = modify(data[i]);
-    else switch (typeof data) {
+    else if (Array.isArray(data)) {
+        data = Object.assign([], data);// to avoid overwriting
+        for (const i in data) data[i] = modify(data[i]);
+        return data;
+    } else switch (typeof data) {
         case 'string':
             return `N'${data}'`;
         case 'boolean': case 'undefined':
             return data ? 1 : 0;
         case 'object':
-            if (data instanceof Date)
-                return `'${date.format(data)}'`;
-
-            // create new object to avoid overwriting
-            data = Object.assign({}, data);
-            if (data.type) return data.type.replace('?', data.value)
-            else for (let i of Object.keys(data))
-                data[i] = modify(data[i]);
+            if (data instanceof Date) return `'${date.format(data)}'`;
+            data = Object.assign({}, data); // to avoid overwriting
+            if (data.type) return data.type.replace('?', data.value);
+            else for (const i of Object.keys(data)) data[i] = modify(data[i])
             return data;
         default: return data;
-    } return data;
+    }
 }
 
 const date = {
@@ -67,6 +60,22 @@ const query = {
                 query += `DELETE FROM ${table} WHERE ${key} = ${id}\n`;
         else query += `DELETE FROM ${table} WHERE ${key} = ${modify(ids)}\n`;
         return query;
+    },
+    multipleInsert: (table, data, keys) => {
+        let query = `INSERT INTO ${table}(${keys}) VALUES\n`;
+        const compileInsert = `const{${keys}}=e; e=Object.values({${keys}}).join('\x2c')`
+
+        data = modify(data);
+        if (Array.isArray(data)) {
+            for (let e of data) {
+                eval(compileInsert);
+                query += `(${e}),\n`
+            } return query.substring(0, query.length-2);
+        } else {
+            let e = data;
+            eval(compileInsert);
+            return query+=`(${e})`;
+        }
     }
 }
 
