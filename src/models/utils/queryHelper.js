@@ -60,6 +60,8 @@ const date = {
 }
 
 const query = {
+    procedure: (proceName, data) => `EXECUTE ${proceName} ${modify(data)}`,
+
     /**
      * @param {String} table name to select 
      * @param  {...any} serials to join query

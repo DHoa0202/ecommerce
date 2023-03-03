@@ -33,7 +33,7 @@ export class AuthorityDAO {
      * @param {Object} id to get data
      * @returns all the data got by half id
      */
-    getByHalfId = async(id) => { // get by u_id or r_id
+    getByHalfId = async (id) => { // get by u_id or r_id
         const key = Object.keys(id)[0];
         const query = sp.select(AuthorityDAO.TABLE, `WHERE ${key} = ${modify(id[key])}`);
         return sql.execute(query).then(async r => r.recordset)
@@ -55,9 +55,9 @@ export class AuthorityDAO {
         return sql.execute(query).then(async r => r.recordset)
     };
 
-    insert = async (data) => {
+    insert = async (data, insertOnly) => {
         const query = sp.multipleInsert(AuthorityDAO.TABLE, data, AuthorityDAO.FIELDS);
-        return sql.execute(query).then(async _r => this.getById(data));
+        return sql.execute(query).then(async r => insertOnly ? r : this.getById(data));
     };
 
     delete = async (ids) => {

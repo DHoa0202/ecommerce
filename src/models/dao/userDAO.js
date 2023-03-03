@@ -1,4 +1,4 @@
-import sp from '../utils/queryHelper.js';
+import sp, { modify } from '../utils/queryHelper.js';
 import { sql } from '../utils/sqlService.js';
 import authorityDAO from './AuthorityDAO.js'
 
@@ -40,6 +40,19 @@ export class UserDAO {
             : (await this.#setUsers(r.recordset))[0]
         );
     };
+
+    login = async (uid, password) => {
+        let query = sp.procedure('SP_LOGIN', [uid, password]);
+        return sql.execute(query).then(async r => (await this.#setUsers(r.recordset))[0]);
+    }
+
+    register = async (uid, password, name, image, roles) => {
+        let query = sp.procedure('SP_REGISTER', [uid, password, name, image]);
+        return sql.execute(query).then(async r => {
+            if (roles?.length) await authorityDAO.insert(roles, true);
+            return (await this.#setUsers(r.recordset))[0]
+        });
+    }
 
     insert = async (data) => { // insert data > get all data updated > return new data
         const isArr = Array.isArray(data); // prepare query

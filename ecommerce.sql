@@ -159,7 +159,6 @@ AS BEGIN
 	ELSE BEGIN
         INSERT INTO USERS(uid, password, name, image) 
         VALUES (@username, PWDENCRYPT(@passowrd), @fullName, iSNULL(@image, 'default.png'));
-        INSERT INTO AUTHORITIES (u_id, r_id) VALUES (@username, 5)
         SELECT * FROM USERS WHERE uid = @username;
     END
 END
@@ -177,10 +176,10 @@ BEGIN
 	);
 
     IF @username is null OR LEN(@password) = 0 RAISERROR('username is empty',15,1);
-    IF @password is null OR LEN(@password) = 0 RAISERROR('pasword is empty',15,1);
+    IF @password is null OR LEN(@password) = 0 RAISERROR('password is empty',15,1);
 
     SELECT * INTO #USER FROM USERS 
-    WHERE uid = @username and PWDCOMPARE(@password, password) > 0
+    WHERE uid = @username and PWDCOMPARE(@password, password) = 1
 
     IF EXISTS(SELECT uid FROM #USER) SELECT * FROM #USER
     ELSE RAISERROR(@meserror, 12,1);

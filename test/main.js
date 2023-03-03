@@ -1,4 +1,5 @@
-import uDAO, {UserDAO} from '../src/models/dao/UserDAO.js';
+import { sql } from '../src/models/utils/sqlService.js';
+import uDAO, { UserDAO } from '../src/models/dao/UserDAO.js';
 import aDAO from '../src/models/dao/AuthorityDAO.js';
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ TEST CLASSES
@@ -40,6 +41,13 @@ class TestUser {
         await uDAO.getList(false).then(r => { if (show) console.dir(r); })
     };
 
+    static security = async (data, show) => {
+        const { uid, pass, name, image, roles } = data;
+        await uDAO.delete(uid).then(r => { if (show) console.dir(r); });
+        await uDAO.register(uid, pass, name, image, roles).then(r => { if (show) console.dir(r); });
+        await uDAO.login(uid, pass).then(r => { if (show) console.dir(r); });
+    }
+
     static test = async (data, show) => { // multiple data
         const isArr = Array.isArray(data);
         await uDAO.delete(isArr ? data.map(r => r.uid) : data.uid).then(r => { if (show) console.dir(r); })
@@ -78,15 +86,31 @@ class TestAuth {
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ EXECUTE TEST
 const show = false;
 // --------------------------------------------------- TEST USER
-await TestUser.accept(TestUser.data.entity, show); // single
-await TestUser.test(TestUser.data.entity, show);
-await TestUser.accept(TestUser.data.entities, show); // multiple
-await TestUser.test(TestUser.data.entities, show);
+// await TestUser.accept(TestUser.data.entity, show); // single
+// await TestUser.test(TestUser.data.entity, show);
+// await TestUser.accept(TestUser.data.entities, show); // multiple
+// await TestUser.test(TestUser.data.entities, show);
+// const userTest = {
+//     uid: 'testRegister', pass: '123', name: 'Name test', image: null,
+//     roles: [
+//         {u_id: 'testRegister', r_id: 1},
+//         {u_id: 'testRegister', r_id: 2},
+//         {u_id: 'testRegister', r_id: 3}
+//     ]
+// };
+// await TestUser.security(userTest, show) // security
 
-// --------------------------------------------------- TEST AUHT
-await TestAuth.test(TestAuth.data.entity, show) // single
-await TestAuth.getById(TestAuth.data.entity, show)
-await TestAuth.getById({u_id: 'abc'}, show) // single-halfId
-await TestAuth.getById({R_id: 1}, show)
-await TestAuth.test(TestAuth.data.entities, show) // multipe
-await TestAuth.getById(TestAuth.data.entities, show)
+// // --------------------------------------------------- TEST AUHT
+// await TestAuth.test(TestAuth.data.entity, show) // single
+// await TestAuth.getById(TestAuth.data.entity, show)
+// await TestAuth.getById({u_id: 'abc'}, show) // single-halfId
+// await TestAuth.getById({R_id: 1}, show)
+// await TestAuth.test(TestAuth.data.entities, show) // multipe
+// await TestAuth.getById(TestAuth.data.entities, show)
+
+const pool = sql.connect;
+pool.close();
+console.log(pool.connected
+    ? "Connected DB_ECOM, it's currently in use."
+    : "Closed connection to DB_ECOM."
+);
