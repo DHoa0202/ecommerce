@@ -143,6 +143,16 @@ AFTER INSERT AS BEGIN
 END
 GO
 
+IF EXISTS (SELECT [object_id] FROM sys.triggers WHERE name = N'TG_PRODUCTS') DROP TRIGGER TG_PRODUCTS
+GO
+CREATE TRIGGER TG_PRODUCTS ON PRODUCTS
+AFTER INSERT AS BEGIN 
+	DECLARE @top int = (SELECT COUNT(prid) FROM inserted);
+    SELECT TOP (@top) * FROM PRODUCTS ORDER BY prid DESC;
+END
+GO
+
+
 -- +++++++++++++++++++++++++++++++++++++++++++++++++++++++++ CREATE PROCEDURES
 IF EXISTS (SELECT [object_id] FROM sys.procedures WHERE name = N'SP_REGISTER') DROP PROC SP_REGISTER
 GO

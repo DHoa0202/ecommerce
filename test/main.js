@@ -1,6 +1,7 @@
-import { sql } from '../src/models/utils/sqlService.js';
+import request, { sql, reseed } from '../src/models/utils/sqlService.js';
 import uDAO, { UserDAO } from '../src/models/dao/UserDAO.js';
-import aDAO from '../src/models/dao/AuthorityDAO.js';
+import aDAO, { role } from '../src/models/dao/AuthorityDAO.js';
+import pDAO, { prdImgDAO } from '../src/models/dao/ProductDAO.js';
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ TEST CLASSES
 class TestUser {
@@ -73,18 +74,20 @@ class TestAuth {
         await aDAO.getList().then(r => { if (show) console.dir(r); });
         await aDAO.delete(data).then(r => { if (show) console.dir(r); });
         await aDAO.insert(data).then(r => { if (show) console.dir(r); });
-        await aDAO.getById(data).then(r => { if (show) console.dir(r); });
+        await aDAO.getByIds(data).then(r => { if (show) console.dir(r); });
     };
 
     static getById = async (data, show) => {
         if (!Array.isArray(data) && Object.keys(data).length < 2)
             await aDAO.getByHalfId(data).then(r => { if (show) console.dir(r); });
-        else await aDAO.getById(data).then(r => { if (show) console.dir(r); });
+        else await aDAO.getByIds(data).then(r => { if (show) console.dir(r); });
     }
 }
 
+
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ EXECUTE TEST
-const show = false;
+const pool = sql.connect;
+var show = false;
 // --------------------------------------------------- TEST USER
 // await TestUser.accept(TestUser.data.entity, show); // single
 // await TestUser.test(TestUser.data.entity, show);
@@ -100,16 +103,55 @@ const show = false;
 // };
 // await TestUser.security(userTest, show) // security
 
-// // --------------------------------------------------- TEST AUHT
+// // --------------------------------------------------- TEST AUTH
 // await TestAuth.test(TestAuth.data.entity, show) // single
 // await TestAuth.getById(TestAuth.data.entity, show)
 // await TestAuth.getById({u_id: 'abc'}, show) // single-halfId
 // await TestAuth.getById({R_id: 1}, show)
 // await TestAuth.test(TestAuth.data.entities, show) // multipe
 // await TestAuth.getById(TestAuth.data.entities, show)
+// await role.getList().then(r => { if (show) console.log(r) }) // ---------- ROLES
+// await role.getByIds([1,2]).then(r => { if (show) console.log(r) }) 
 
-const pool = sql.connect;
-pool.close();
+// // --------------------------------------------------- TEST PRODUCTS
+const data = {
+    entity: {
+        prid: 4,
+        subject: 'Product 4',
+        note: 'Sản phẩm thứ tư',
+        price: 10.5,
+        quantity: 3,
+        u_id: 'admin',
+        c_id: 1,
+        images: ['product4_1.png', 'product4_2.png']
+    },
+    entities: [
+        {
+            prid: 5,
+            subject: 'Product 5',
+            note: 'Sản phẩm thứ năm',
+            price: 10.5,
+            quantity: 235,
+            u_id: 'seller',
+            c_id: 1,
+            images: ['product5_1.png']
+        }, {
+            prid: 6,
+            subject: 'Product 6',
+            note: 'Sản phẩm thứ sáu',
+            price: 29,
+            quantity: 26,
+            u_id: 'seller',
+            c_id: 1,
+            images: ['product6_1.png', 'product6_2.png', 'product6_2.png']
+        }
+    ]
+}
+
+reseed('PRODUCTS', 'prid');
+await pDAO.update(data.entities).then(r => { if (show) console.log(r); });
+
+await pool.close();
 console.log(pool.connected
     ? "Connected DB_ECOM, it's currently in use."
     : "Closed connection to DB_ECOM."

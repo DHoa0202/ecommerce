@@ -1,4 +1,7 @@
 import moment from 'moment'
+import env from 'dotenv';
+
+const defaultTop = env.config().parsed?.DEFAULT_TOP || 1E3;
 
 const util = {
     // Single insert by row
@@ -67,7 +70,8 @@ const query = {
      * @param  {...any} serials to join query
      * @returns select query by table
      */
-    select: (table, ...serials) => `SELECT * FROM ${table} ${serials.join('\xa0')}`,
+    select: (table, top, fields, ...serials) =>
+        `SELECT TOP ${top || defaultTop} ${fields || '*'} FROM ${table} ${serials.join('\xa0')}`,
     /**
      * @param {String} table name to insert
      * @param {Object | Array} data to insert into ...
@@ -122,6 +126,13 @@ const query = {
             eval(compileInsert);
             return query += `(${e})`;
         }
+    },
+    multipleDelete: (table, key, ids) => {
+        let query = `DELETE FROM ${table} WHERE`
+        ids = modify(ids);
+        for (const id of ids) query += ` ${key}=${id}\n OR`;
+        query = query.substring(0, query.length - 3);
+        return query;
     }
 }
 

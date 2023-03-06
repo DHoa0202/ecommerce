@@ -20,5 +20,16 @@ const request = async (query) => {
     return pool.query(query);
 }
 
-export { sql }
+const reseed = async (table, key) => {
+    const pool = new mssql.ConnectionPool(config);
+    const conn = await pool.connect();
+    // the first session get max identity by id
+    let query = `SELECT MAX(${key}) as max FROM ${table}`;
+    const max = (await conn.query(query)).recordset[0]?.max || 1;
+    // seconds session RESEED key identity
+    query = `DBCC CHECKIDENT ('${table}', RESEED, ${max});`;
+    return (await conn.query(query).finally(() => conn.close()));
+}
+
+export { sql, reseed }
 export default request;

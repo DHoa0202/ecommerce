@@ -1,5 +1,5 @@
 import sp, { modify } from '../utils/queryHelper.js';
-import { sql } from '../utils/sqlService.js';
+import request, { sql } from '../utils/sqlService.js';
 
 const _sp = {
     delete: (ids) => { // create query to delete multiple id
@@ -19,7 +19,7 @@ const _sp = {
 
 export class AuthorityDAO {
     static TABLE = '[AUTHORITIES]';
-    static FIELDS = ['u_id', 'r_id'];
+    static FIELDS = 'u_id, r_id';
 
     getList = async () => { // get all authorities
         const query = sp.select(AuthorityDAO.TABLE);
@@ -39,8 +39,8 @@ export class AuthorityDAO {
         return sql.execute(query).then(async r => r.recordset)
     }
 
-    getById = async (ids) => { // get by id EX: {u_id: 'abc', r_id: 1} WHERE u_id='abc' AND r_id=1
-        let query = sp.select(AuthorityDAO.TABLE, 'WHERE ');
+    getByIds = async (ids) => { // get by id EX: {u_id: 'abc', r_id: 1} WHERE u_id='abc' AND r_id=1
+        let query = sp.select(AuthorityDAO.TABLE, null, null, 'WHERE ');
         const isArr = Array.isArray(ids);
 
         if (isArr) { // single id or multiple id
@@ -64,6 +64,27 @@ export class AuthorityDAO {
         let query = _sp.delete(ids);
         return sql.execute(query).then(async r => r.rowsAffected[0]);
     };
+
 }
 
+const role = {
+    KEY: 'rid',
+    TABLE: '[ROLES]',
+
+    getList: async () => {
+        let query = sp.select(role.TABLE);
+        return (await request(query)).recordset
+    },
+
+    getByIds: async (ids) => {
+        let query = sp.select(role.TABLE, null, null, `WHERE ${role.KEY} = `);
+        const isArr = Array.isArray(ids);
+
+        // multiple id or single id
+        query += isArr ? ids.toString().replaceAll('\x2c', ` OR ${role.KEY}=`) : ids;
+        return (await request(query)).recordset;
+    }
+}
+
+export { role }
 export default new AuthorityDAO();
