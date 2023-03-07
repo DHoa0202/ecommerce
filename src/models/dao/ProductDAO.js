@@ -118,14 +118,14 @@ export class ProductDAO {
             for (const i in result) {// check type of data and get image
                 const images = isArr ? data[i]['images'] : data['images'];
                 // insert product's images and don't get result
-                await this.insert(result[i][key], images, true)
+                await prdImgDAO.insert(result[i][key], images, true)
                     // past images to result of the insert product
                     .then(_r => result[i]['images'] = images)
                     .catch(err => { // set empty array if error insert images
                         result[i]['images'] = [];
                         console.error(err.message);
                     });
-            } return result;
+            } return isArr ? result : result[0];
         });
     }
 
@@ -152,6 +152,7 @@ export class ProductDAO {
     }
 
     delete = async (ids) => { // delete by single id or multiple id
+        const [table, key] = [ProductDAO.TABLE, ProductDAO.KEY];
         let query = sp.delete(table, key, ids);
         return sql.execute(query).then(r => r.rowsAffected.map((x, y) => x + y));
     }

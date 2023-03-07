@@ -2,6 +2,7 @@ import sp, { modify } from '../utils/queryHelper.js';
 import request, { sql } from '../utils/sqlService.js';
 
 const _sp = {
+
     delete: (ids) => { // create query to delete multiple id
         const [id1, id2] = AuthorityDAO.FIELDS;
         let query = `DELETE FROM ${AuthorityDAO.TABLE} WHERE `;
@@ -19,7 +20,7 @@ const _sp = {
 
 export class AuthorityDAO {
     static TABLE = '[AUTHORITIES]';
-    static FIELDS = 'u_id, r_id';
+    static FIELDS = ['u_id', 'r_id'];
 
     getList = async () => { // get all authorities
         const query = sp.select(AuthorityDAO.TABLE);
@@ -34,8 +35,9 @@ export class AuthorityDAO {
      * @returns all the data got by half id
      */
     getByHalfId = async (id) => { // get by u_id or r_id
+        const [table, fields, top] = [AuthorityDAO.TABLE, AuthorityDAO.FIELDS, undefined]
         const key = Object.keys(id)[0];
-        const query = sp.select(AuthorityDAO.TABLE, `WHERE ${key} = ${modify(id[key])}`);
+        const query = sp.select(table, top, fields, `WHERE ${key} = ${modify(id[key])}`);
         return sql.execute(query).then(async r => r.recordset)
     }
 
@@ -57,7 +59,7 @@ export class AuthorityDAO {
 
     insert = async (data, insertOnly) => {
         const query = sp.multipleInsert(AuthorityDAO.TABLE, data, AuthorityDAO.FIELDS);
-        return sql.execute(query).then(async r => insertOnly ? r : this.getById(data));
+        return sql.execute(query).then(async r => insertOnly ? r : await this.getByIds(data));
     };
 
     delete = async (ids) => {

@@ -138,7 +138,10 @@ GO
 CREATE TRIGGER TG_ORDER_DETAILS ON ORDER_DETAILS
 AFTER INSERT AS BEGIN 
 	SELECT SUM(quantity) as 'quantity', pr_id INTO # FROM inserted GROUP BY pr_id
-	UPDATE pr SET pr.quantity = pr.quantity - #.quantity
+    -- RAISERROR when pr.quantity < #.quantity 
+    -- DECLATE @meserror = CONCAT(#.quantity,'exceed the quantity in stock(',pr.quantity,')');
+    -- >>> RAISERROR(@meserror, 15, 1);
+    UPDATE pr SET pr.quantity = pr.quantity - #.quantity
 	FROM PRODUCTS pr INNER JOIN # ON pr.prid = #.pr_id
 END
 GO
@@ -146,7 +149,7 @@ GO
 IF EXISTS (SELECT [object_id] FROM sys.triggers WHERE name = N'TG_PRODUCTS') DROP TRIGGER TG_PRODUCTS
 GO
 CREATE TRIGGER TG_PRODUCTS ON PRODUCTS
-AFTER INSERT AS BEGIN 
+AFTER INSERT AS BEGIN -- return all products after inserted
 	DECLARE @top int = (SELECT COUNT(prid) FROM inserted);
     SELECT TOP (@top) * FROM PRODUCTS ORDER BY prid DESC;
 END

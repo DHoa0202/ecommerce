@@ -20,6 +20,7 @@ const request = async (query) => {
     return pool.query(query);
 }
 
+// Connect and close in this function;
 const reseed = async (table, key) => {
     const pool = new mssql.ConnectionPool(config);
     const conn = await pool.connect();

@@ -37,8 +37,8 @@ class TestUser {
         ]
     }
 
-    static accept = async (data, show) => { // read only
-        await uDAO.setAccept(data).then(r => { if (show) console.dir(r); });
+    static access = async (data, show) => { // read only
+        await uDAO.setAccess(data).then(r => { if (show) console.dir(r); });
         await uDAO.getList(false).then(r => { if (show) console.dir(r); })
     };
 
@@ -84,14 +84,118 @@ class TestAuth {
     }
 }
 
+class TestProduct {
+    static data = {
+        entity: {
+            subject: 'Product 4',
+            note: 'Sản phẩm thứ tư',
+            price: 10.5,
+            quantity: 3,
+            u_id: 'admin',
+            c_id: 1,
+            images: ['product4_1.png', 'product4_2.png']
+        },
+        entities: [
+            {
+                subject: 'Product 5',
+                note: 'Sản phẩm thứ năm',
+                price: 10.5,
+                quantity: 235,
+                u_id: 'seller',
+                c_id: 1,
+                images: 'product5_1.png'
+            }, {
+                subject: 'Product 6',
+                note: 'Sản phẩm thứ sáu',
+                price: 29,
+                quantity: 26,
+                u_id: 'seller',
+                c_id: 1,
+                images: ['product6_1.png', 'product6_2.png', 'product6_2.png']
+            }
+        ]
+    }
+
+    static baseBack = async (at, show) => {
+        await request(`DELETE FROM PRODUCTS WHERE prid > ${at || 3}`).then(r => {
+            if (show) console.log(`DELETE >>>>>>>>> ${r.rowsAffected[0]} products.`);
+        });
+        await reseed('PRODUCTS', 'prid'); // delete and reseed identity id
+    }
+
+    static test = async (data, show) => {
+        const isSingle = !Array.isArray(data);
+        const insert = async () => {
+            await pDAO.insert(data).then(r => {
+                if (isSingle) data['prid'] = Number.parseInt(r['prid']);
+                else r.forEach((e, i) => (data[i]['prid'] = Number.parseInt(e['prid'])));
+                if (show) console.log(r);
+            });
+        }
+
+        await insert(); pDAO.delete(isSingle ? data['prid'] : data.map(e => e['prid']));
+        await insert(); await pDAO.update(data).then(r => { if (show) console.log(r); });
+    }
+
+    static testImg = async (data, show) => {
+        const [key1, key2] = ['pr_id', 'images'];
+        const isArr = Array.isArray(data);
+        const setEntity = (entity) => {
+            const { prid, images } = entity;
+            return { [key1]: prid, [key2]: (images?.length ? images : []) };
+        }
+        const singleTestImg = async (e) => {
+            await prdImgDAO.insert(e[key1], e[key2], true)
+                .then(r => { if (show) console.log(r); })
+                .catch(err => console.error(err.message));
+        }
+
+
+        if (isArr) {
+            const ids = data.map(e => e[key1] || e['prid']);
+
+            // get all data by list id
+            await prdImgDAO.getByPID(ids)
+                .then(r => { if (show) console.log(r); })
+                .catch(err => console.error(err.message));
+
+            // delete all data by list id
+            await prdImgDAO.delete(ids)
+                .then(r => { if (show) console.log(r); })
+                .catch(err => console.error(err.message));
+
+            for (let e of data) { // single insert each
+                e = setEntity(e);
+                if (e[key1] && e[key2]) await singleTestImg(e);
+                else console.error(`Err: ${key1}: ${e[key1]} && ${key2}: ${e[key2]}`);
+            }
+        } else {
+            const id = data[key1] || data['prid'];
+            data = setEntity(data);
+
+
+            // get all data by list id
+            await prdImgDAO.getByPID(id)
+                .then(r => { if (show) console.log(r); });
+
+            // delete all data by list id
+            await prdImgDAO.delete(id)
+                .then(r => { if (show) console.log(r); })
+
+            if (data[key1] && data[key2]) await singleTestImg(data);
+            else console.error(`Err: ${key1}: ${data[key1]} && ${key2}: ${data[key2]}`);
+        }
+
+    }
+}
 
 // ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ EXECUTE TEST
 const pool = sql.connect;
 var show = false;
 // --------------------------------------------------- TEST USER
-// await TestUser.accept(TestUser.data.entity, show); // single
+// await TestUser.access(TestUser.data.entity, show); // single
 // await TestUser.test(TestUser.data.entity, show);
-// await TestUser.accept(TestUser.data.entities, show); // multiple
+// await TestUser.access(TestUser.data.entities, show); // multiple
 // await TestUser.test(TestUser.data.entities, show);
 // const userTest = {
 //     uid: 'testRegister', pass: '123', name: 'Name test', image: null,
@@ -114,42 +218,11 @@ var show = false;
 // await role.getByIds([1,2]).then(r => { if (show) console.log(r) }) 
 
 // // --------------------------------------------------- TEST PRODUCTS
-const data = {
-    entity: {
-        prid: 4,
-        subject: 'Product 4',
-        note: 'Sản phẩm thứ tư',
-        price: 10.5,
-        quantity: 3,
-        u_id: 'admin',
-        c_id: 1,
-        images: ['product4_1.png', 'product4_2.png']
-    },
-    entities: [
-        {
-            prid: 5,
-            subject: 'Product 5',
-            note: 'Sản phẩm thứ năm',
-            price: 10.5,
-            quantity: 235,
-            u_id: 'seller',
-            c_id: 1,
-            images: ['product5_1.png']
-        }, {
-            prid: 6,
-            subject: 'Product 6',
-            note: 'Sản phẩm thứ sáu',
-            price: 29,
-            quantity: 26,
-            u_id: 'seller',
-            c_id: 1,
-            images: ['product6_1.png', 'product6_2.png', 'product6_2.png']
-        }
-    ]
-}
-
-reseed('PRODUCTS', 'prid');
-await pDAO.update(data.entities).then(r => { if (show) console.log(r); });
+// await TestProduct.baseBack(undefined, show);
+// await TestProduct.test(TestProduct.data.entity, show) // single
+// await TestProduct.test(TestProduct.data.entities, show) // multiple
+// await TestProduct.testImg(TestProduct.data.entity, show); // single entity's images
+// await TestProduct.testImg(TestProduct.data.entities, show); // multiple entities're data['prid']
 
 await pool.close();
 console.log(pool.connected

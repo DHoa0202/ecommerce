@@ -22,7 +22,7 @@ export class UserDAO {
     getList = async (isAccess) => { // prepare query > get user > set user > return user
         const [table, access] = [
             UserDAO.TABLE,
-            isAccess != undefined ? `WHERE accept=${accept ? 1 : 0}` : ''
+            isAccess != undefined ? `WHERE access=${isAccess ? 1 : 0}` : ''
         ];
         const query = sp.select(table, null, null, access);
 
@@ -87,9 +87,9 @@ export class UserDAO {
         ));
     };
 
-    setAccept = async (data) => { // update accept to access data
+    setAccess = async (data) => { // update access to access data
         const [table, key] = [UserDAO.TABLE, UserDAO.KEY];
-        const query = sp.update(table, data, ['uid', 'accept'], key);
+        const query = sp.update(table, data, ['uid', 'access'], key);
 
         return sql.execute(query).then(async _r => this.getById( // get new data
             Array.isArray(data) ? data.map(e => e[key]) : data[key]
