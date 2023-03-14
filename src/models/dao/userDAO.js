@@ -1,4 +1,4 @@
-import sp, { modify } from '../utils/queryHelper.js';
+import sp, { modify, query2 as _sp } from '../utils/queryHelper.js';
 import { sql } from '../utils/sqlService.js';
 import authorityDAO, { role } from './AuthorityDAO.js'
 
@@ -30,7 +30,7 @@ export class UserDAO {
         return sql.execute(query).then(async r => await this.#setUsers(r.recordset))
     };
 
-    getById = async (ids) => {
+    getByIds = async (ids) => {
         const [table, key] = [UserDAO.TABLE, UserDAO.KEY];
         const isArr = Array.isArray(ids); // prepare query
         let query = sp.select(table, null, null, 'WHERE');
@@ -54,6 +54,7 @@ export class UserDAO {
 
     register = async (uid, password, name, image, roles) => {
         let query = sp.procedure('SP_REGISTER', [uid, password, name, image]);
+        
         return sql.execute(query).then(async r => {
             if (roles?.length) await authorityDAO.insert(roles, true);
             return (await this.#setUsers(r.recordset))[0]
@@ -87,14 +88,11 @@ export class UserDAO {
         ));
     };
 
-    setAccess = async (data) => { // update access to access data
+    setAccess = async (ids, access) => {
         const [table, key] = [UserDAO.TABLE, UserDAO.KEY];
-        const query = sp.update(table, data, ['uid', 'access'], key);
-
-        return sql.execute(query).then(async _r => this.getById( // get new data
-            Array.isArray(data) ? data.map(e => e[key]) : data[key]
-        ));
-    }
+        let query = _sp.toggleAccess(table, key, ids, access);
+        return sql.execute(query).then(async r => r.rowsAffected[0]);
+    };
 
     delete = async (ids) => { // delete by id or multiple ids > return Total of the rowsAffected
         const [table, key] = [UserDAO.TABLE, UserDAO.KEY];

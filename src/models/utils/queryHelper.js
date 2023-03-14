@@ -136,5 +136,14 @@ const query = {
     }
 }
 
-export { modify, date }
+const query2 = {
+    toggleAccess: (table, key, ids, access) => {
+        const condition = ` OR ${key}=`;
+        const [isArr, set] = [Array.isArray(ids), 'access'];
+        const query = `UPDATE ${table} SET ${set}=${modify(access)} WHERE\n${key}=`;
+        return query + (isArr ? modify(ids).join(condition) : modify(ids));
+    }
+}
+
 export default query;
+export { modify, date, query2 }

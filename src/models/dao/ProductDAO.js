@@ -1,6 +1,5 @@
-import sp, { modify } from '../utils/queryHelper.js';
+import sp, { modify, query2 as _sp } from '../utils/queryHelper.js';
 import { sql } from '../utils/sqlService.js';
-
 
 export class ProductImage {
     static KEY = 'pr_id';
@@ -53,7 +52,7 @@ export class ProductImage {
             let imgCondition = ' AND (';
             for (const image of data) imgCondition += `image=${image} OR `;
             imgCondition = `${imgCondition.substring(0, imgCondition.length - 3)})`;
-            query += imgCondition;
+            return query += imgCondition;
         }
 
         if (unique && imgExist) {
@@ -73,6 +72,7 @@ export class ProductDAO {
     static KEY = 'prid';
     static TABLE = '[PRODUCTS]'// primary key - fields - foreign keys
     static FIELDS = ['subject', 'note', 'price', 'quantity', 'u_id', 'c_id'];
+    static ACCESS = 'access'
     static IMAGE = 'images';
 
     #setProducts = async (data) => {
@@ -85,9 +85,10 @@ export class ProductDAO {
     };
 
     getList = async (access) => {
-        const [table] = [ProductDAO.TABLE];
+        const [table, accessField] = [ProductDAO.TABLE, ProductDAO.ACCESS];
         let query = access == undefined ? sp.select(table)
-            : sp.select(table, null, null, `WHERE [access]=${modify(access)}`);
+            : sp.select(table, null, null, `WHERE ${accessField}=${modify(access)}`);
+
         return sql.execute(query).then(r => this.#setProducts(r.recordset));
     }
 
@@ -103,28 +104,27 @@ export class ProductDAO {
 
         // execute and modify users to get authorities and format password
         return sql.execute(query).then(async r => isArr
-            ? (await this.#setProducts(r.recordset))
-            : (await this.#setProducts(r.recordset))[0]
+            ? (await this.#setProducts(r.recordset)) || []
+            : (await this.#setProducts(r.recordset))[0] || {}
         );
     }
 
     insert = async (data) => {
-        const [table, key, fields] = [ProductDAO.TABLE, ProductDAO.KEY, ProductDAO.FIELDS];
+        const [table, key, fields, image] = [
+            ProductDAO.TABLE, ProductDAO.KEY,
+            ProductDAO.FIELDS, ProductDAO.IMAGE
+        ];
         const isArr = Array.isArray(data); // check object or array<object>
         const query = sp.insert(table, data, fields);
 
         return sql.execute(query).then(async r => { // insert success > insert images
-            const result = r.recordsets.map(e => e[0]);
+            const result = r.recordsets.map(e => e[0]); // get all recordsets
             for (const i in result) {// check type of data and get image
-                const images = isArr ? data[i]['images'] : data['images'];
-                // insert product's images and don't get result
+                const images = isArr ? data[i][image] : data[image];
+                // past images to product and don't get result
                 await prdImgDAO.insert(result[i][key], images, true)
-                    // past images to result of the insert product
-                    .then(_r => result[i]['images'] = images)
-                    .catch(err => { // set empty array if error insert images
-                        result[i]['images'] = [];
-                        console.error(err.message);
-                    });
+                    .then(_r => result[i][image] = images)
+                    .catch(_err => result[i][image] = []);
             } return isArr ? result : result[0];
         });
     }
@@ -135,7 +135,7 @@ export class ProductDAO {
             ProductDAO.FIELDS, ProductDAO.IMAGE
         ];
         const isArr = Array.isArray(data);
-        const query = sp.update(table, data, fields, 'prid');
+        const query = sp.update(table, data, fields, key);
         const ids = isArr ? data.map(e => e[key]) : data[key];
         const updateImg = async (key, images) => {
             if (images?.length) {
@@ -147,19 +147,25 @@ export class ProductDAO {
         // images already exists => delete data images
         if (isArr) data.forEach(async e => updateImg(e[key], e[image]))
         else updateImg(data[key], data[image]);
-
         return sql.execute(query).then(async _r => this.getByIds(ids));
+    }
+
+    setAccess = async (ids, access) => {
+        const [table, key] = [ProductDAO.TABLE, ProductDAO.KEY];
+        let query = _sp.toggleAccess(table, key, ids, access)
+
+        return sql.execute(query).then(async r => r.rowsAffected[0]);
     }
 
     delete = async (ids) => { // delete by single id or multiple id
         const [table, key] = [ProductDAO.TABLE, ProductDAO.KEY];
-        let query = sp.delete(table, key, ids);
+        let query = sp.multipleDelete(table, key, ids);
+
         return sql.execute(query).then(r => r.rowsAffected.map((x, y) => x + y));
     }
+
 }
 
-
 const prdImgDAO = new ProductImage();
-
 export { prdImgDAO };
 export default new ProductDAO();

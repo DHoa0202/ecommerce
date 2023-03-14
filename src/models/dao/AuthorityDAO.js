@@ -18,6 +18,25 @@ const _sp = {
     }
 }
 
+const role = {
+    KEY: 'rid',
+    TABLE: '[ROLES]',
+
+    getList: async () => {
+        let query = sp.select(role.TABLE);
+        return (await request(query)).recordset
+    },
+
+    getByIds: async (ids) => {
+        const isArr = Array.isArray(ids);
+        let query = sp.select(role.TABLE, null, null, `WHERE ${role.KEY} = `);
+
+        // multiple id or single id
+        query += isArr ? ids.toString().replaceAll('\x2c', ` OR ${role.KEY}=`) : ids;
+        return (await request(query)).recordset;
+    }
+}
+
 export class AuthorityDAO {
     static TABLE = '[AUTHORITIES]';
     static FIELDS = ['u_id', 'r_id'];
@@ -67,25 +86,6 @@ export class AuthorityDAO {
         return sql.execute(query).then(async r => r.rowsAffected[0]);
     };
 
-}
-
-const role = {
-    KEY: 'rid',
-    TABLE: '[ROLES]',
-
-    getList: async () => {
-        let query = sp.select(role.TABLE);
-        return (await request(query)).recordset
-    },
-
-    getByIds: async (ids) => {
-        let query = sp.select(role.TABLE, null, null, `WHERE ${role.KEY} = `);
-        const isArr = Array.isArray(ids);
-
-        // multiple id or single id
-        query += isArr ? ids.toString().replaceAll('\x2c', ` OR ${role.KEY}=`) : ids;
-        return (await request(query)).recordset;
-    }
 }
 
 export { role }
