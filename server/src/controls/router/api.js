@@ -13,6 +13,12 @@ const notFoundAPI = (firstPath, application) => {
         ];
         const json = { message: `${req.originalUrl} not found!`, paths: [] };
         for (const path of paths) json.paths.push(`${firstPath}${path}`)
+        json.files = [
+            "/api/images/category",
+            "/api/images/product",
+            "/api/images/user"
+        ];
+
         return res.status(404).json(json);
     };
     application
@@ -20,7 +26,7 @@ const notFoundAPI = (firstPath, application) => {
         .use(`${firstPath}/*`, middleware, notFound);
 };
 
-export default (application, pathAPI = '/api') => {
+export default (application, pathAPI = '') => {
     application.use(express.json());
 
     // APIs're ROUTER

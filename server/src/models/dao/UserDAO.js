@@ -50,13 +50,21 @@ export class UserDAO {
     };
 
     login = async (uid, password) => {
+        if(!uid || !password) throw 'username or password incorect!'
         let query = sp.procedure('SP_LOGIN', [uid, password]);
-        return sql.execute(query).then(async r => (await this.#setUsers(r.recordset))[0]);
+        return sql.execute(query).then(async r => {
+            let [user] = r.recordset;
+            delete user.access;
+            delete user.regTime;
+            delete user.password;
+            user.roleIds = (await authorityDAO.getByHalfId({ u_id: user.uid })).map(e => e.r_id);
+            return user;
+        });
     }
 
     register = async (uid, password, name, image, roles) => {
         let query = sp.procedure('SP_REGISTER', [uid, password, name, image]);
-        
+
         return sql.execute(query).then(async r => {
             if (roles?.length) await authorityDAO.insert(roles, true);
             return (await this.#setUsers(r.recordset))[0]

@@ -1,10 +1,14 @@
 import fs from 'fs';
+import env from 'dotenv';
 import multer from "multer";
+
+const properties = env.config().parsed;
+const {SOURCE, STATIC_FOLDER} = properties;
 
 export class FileHelper {
 
     constructor(path) {
-        this.dest = `./src/assets${path}`;
+        this.dest = `${SOURCE}/${STATIC_FOLDER}${path}`;
         if (!fs.existsSync(this.dest)) fs.mkdirSync(this.dest, { recursive: true });
         this.upload = multer({ dest: this.dest });
     }
@@ -31,19 +35,25 @@ export class FileHelper {
         return status;
     }
 }
-
-const fileHelperAPI = (application, image) => {
-    const path = `/images/${image}`;
-    const file = new FileHelper(path);
+/**
+ * 
+ * @param {Express} application 
+ * @param {string} path the first path api
+ * @param {string || Array} folder to concat with first path
+ */
+const fileHelperAPI = (application, path, folder) => {
+    if(!folder) return;
+    else if(Array.isArray(folder)) folder = folder.join();
+    const file = new FileHelper(folder);
     
     application
-        .get(`/api${path}`, (_req, res) => res
+        .get(`${path}${folder}`, (_req, res) => res
             .status(200).json(file.readAll())
         )
-        .post(`/api${path}`, file.upload.any(), (req, res) => res
+        .post(`${path}${folder}`, file.upload.any(), (req, res) => res
             .status(200).json(req['files'].map(e => `${path}/${e.filename}`))
         )
-        .delete(`/api${path}/:fileName`, (req, res) => {
+        .delete(`${path}${folder}/:fileName`, (req, res) => {
             const json = { message: undefined }, { fileName } = req.params;
             try {
                 res.status(200);
@@ -57,7 +67,7 @@ const fileHelperAPI = (application, image) => {
                 return res.json(json);
             }
         })
-        .delete(`/api${path}`, (req, res) => {
+        .delete(`${path}${folder}`, (req, res) => {
             const fileNames = req.query['fn'] || req.body['images'];
             if (Array.isArray(fileNames)) {
                 const status = file.multipleRemove(fileNames);
@@ -66,7 +76,14 @@ const fileHelperAPI = (application, image) => {
             return res;
         });
 }
-const fileHelperAPIs = (application, ...images) => images.forEach(image => fileHelperAPI(application, image));
+
+/**
+ * create multiple API router
+ * @param {Express} application 
+ * @param path is the first path api
+ * @param  {string || Array<string>} folders 
+ */
+const fileHelperAPIs = (application, path, ...folders) => folders.forEach(folder => fileHelperAPI(application, path, folder));
 
 export { fileHelperAPI, fileHelperAPIs }
-export default (path) => new FileHelper(path);
+export default (packages) => new FileHelper(packages);

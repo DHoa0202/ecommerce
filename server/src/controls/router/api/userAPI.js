@@ -7,10 +7,14 @@ const security = {
     // login by username and password
     login: async (req, res) => {
         res.header('Access-Control-Allow-Methods', 'POST,PUT');
-        let auth = req.headers['authorization']; // priority 1
-        const { username, password } = req.body; // priority 2
+        const [bd, qr] = [req.body, req.query];
+        let auth = req.headers['authorization'] || qr.auth; // priority 1
+        let [username, password] = [
+            bd.username || qr.username,
+            bd.password || qr.password
+        ]; // priority 2
 
-        if (auth) {
+        if (auth) { // priority login with token
             auth = auth.replace('Bearer ', '');
             return res.status(200).json(jsonToken.verify(auth))
         } else return dao.login(username, password)
@@ -40,7 +44,6 @@ export default (paths, application) => {
     const lastPath = '/users';
     const router = option2(dao, lastPath);
 
-    console.log(`${lastPath}/login`);
     application // Allow-Methods: POST,PUT
         .use(`${lastPath}/login`, middleware, security.login)
         .use(`${lastPath}/logout`, middleware, security.logout);
