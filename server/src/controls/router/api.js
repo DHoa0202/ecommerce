@@ -14,6 +14,7 @@ const notFoundAPI = (firstPath, application) => {
         const json = { message: `${req.originalUrl} not found!`, paths: [] };
         for (const path of paths) json.paths.push(`${firstPath}${path}`)
         json.files = [
+            "/images/category/:fileName",
             "/api/images/category",
             "/api/images/product",
             "/api/images/user"

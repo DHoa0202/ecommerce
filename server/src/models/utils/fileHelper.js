@@ -45,13 +45,14 @@ const fileHelperAPI = (application, path, folder) => {
     if(!folder) return;
     else if(Array.isArray(folder)) folder = folder.join();
     const file = new FileHelper(folder);
+    const pathAPI = `${path}${folder}`;
     
     application
-        .get(`${path}${folder}`, (_req, res) => res
+        .get(pathAPI, (_req, res) => res
             .status(200).json(file.readAll())
         )
-        .post(`${path}${folder}`, file.upload.any(), (req, res) => res
-            .status(200).json(req['files'].map(e => `${path}/${e.filename}`))
+        .post(pathAPI, file.upload.any(), (req, res) => res
+            .status(200).json(req['files'].map(e => `${folder}/${e.filename}`))
         )
         .delete(`${path}${folder}/:fileName`, (req, res) => {
             const json = { message: undefined }, { fileName } = req.params;
@@ -67,7 +68,7 @@ const fileHelperAPI = (application, path, folder) => {
                 return res.json(json);
             }
         })
-        .delete(`${path}${folder}`, (req, res) => {
+        .delete(pathAPI, (req, res) => {
             const fileNames = req.query['fn'] || req.body['images'];
             if (Array.isArray(fileNames)) {
                 const status = file.multipleRemove(fileNames);
